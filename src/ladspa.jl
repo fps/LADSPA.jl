@@ -2,6 +2,29 @@ module LADSPA
 
 import Libdl
 
+"""
+    path()
+
+Get the list of directories from the LADSPA_PATH environment variable.
+"""
+path() = split(ENV["LADSPA_PATH"], ":")
+
+export path
+
+
+"""
+    libs()
+
+Get the list of shared libraries in the directories returned from path().
+"""
+libs() = filter(x -> x[(end-(length(Libdl.dlext)-1)):end] == Libdl.dlext, vcat([p * "/" .* Base.Filesystem.readdir(p) for p in filter(Base.Filesystem.isdir, path())]...))
+
+export libs
+
+
+"""
+A structure mirroring the LADSPA_Descriptor C structure
+"""
 struct Descriptor
     UniqueID::Culong
     Label::Cstring
@@ -25,30 +48,85 @@ struct Descriptor
     cleanup::Ptr{Cvoid}
 end
 
-function load_library(path)
-    Libdl.dlopen(path)
+
+"""
+    descriptor(lib, index)
+
+Get the LADSPA descriptor at index from lib (lib has to be opened with Libdl.dlopen())
+"""
+descriptor(lib, index) = ccall(Libdl.dlsym(lib, "ladspa_descriptor"), Ptr{LADSPA.Descriptor}, (Int32,), index)
+
+export descriptor
+
+
+"""
+    descriptors(lib)
+
+Get the list of all LADSPA descriptors in a lib (lib has to be opened with Libdl.dlopen())
+"""
+function descriptors(lib)
+    index = 0
+    ds = []
+    while true
+        d = descriptor(lib, index)
+        if d == C_NULL
+            break;
+        end
+        
+        push!(ds, d)
+        index += 1
+    end
+    ds
 end
 
-function descriptor(lib, index)
-    f = Libdl.dlsym(lib, "ladspa_descriptor")
-    d = ccall(f, Ptr{LADSPA.Descriptor}, (Int32,), index)
-    (d, unsafe_load(d))
-end
 
-function instantiate(descriptor, samplerate)
-    ccall(unsafe_load(descriptor).instantiate, Ptr{Cvoid}, (Ptr{Descriptor}, Culong), descriptor, samplerate)
-end
+"""
+    descriptors()
 
-function activate(descriptor, instance)
-    ccall(unsafe_load(descriptor).activate, Cvoid, (Ptr{Cvoid},), instance)
-end
+Find all LADSPA plugin descriptors on the system (uses libs() to find all LADSPA plugin libs on the system)
+"""
+descriptors() = vcat([descriptors(Libdl.dlopen(l)) for l in libs()]...)
 
-function connect_port(descriptor, instance, port_index, buffer)
-    ccall(unsafe_load(descriptor).connect_port, Cvoid, (Ptr{Cvoid}, Culong, Ptr{Float32}), instance, port_index, buffer)
-end
+export descriptors
 
-function run(descriptor, instance, sample_count)
-    ccall(unsafe_load(descriptor).run, Cvoid, (Ptr{Cvoid}, Culong), instance, sample_count)
-end
+
+"""
+    instantiate(descriptor, samplerate)
+
+Instantiate a plugin given a descriptor and a samplerate.
+"""
+instantiate(descriptor, samplerate) = ccall(unsafe_load(descriptor).instantiate, Ptr{Cvoid}, (Ptr{Descriptor}, Culong), descriptor, samplerate)
+
+export instantiate
+
+
+"""
+    activate(descriptor, instance)
+
+Activate a plugin instance. Call this only when unsafe_load(descriptor).activate != C_NULL.
+"""
+activate(descriptor, instance) = ccall(unsafe_load(descriptor).activate, Cvoid, (Ptr{Cvoid},), instance)
+
+export activate
+
+
+"""
+    connect_port(descriptor, instance, port_index, buffer)
+
+Connect a port of an instance of a plugin to a buffer (e.g. Vector{Float32})
+"""
+connect_port(descriptor, instance, port_index, buffer) = ccall(unsafe_load(descriptor).connect_port, Cvoid, (Ptr{Cvoid}, Culong, Ptr{Float32}), instance, port_index, buffer)
+
+export connect_port
+
+
+"""
+    run(descriptor, instance, sample_count)
+
+Run the ladspa plugin instance for the given sample count. Make sure all buffers are connected before calling this.
+"""
+run(descriptor, instance, sample_count) = ccall(unsafe_load(descriptor).run, Cvoid, (Ptr{Cvoid}, Culong), instance, sample_count)
+
+export run
 
 end
