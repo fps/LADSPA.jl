@@ -3,7 +3,7 @@ A module for loading and running LADSPA plugins from Julia code.
 
 # Examples
 
-Find the plugin with label "AmpVTS" in the system:
+Find the plugin with label "AmpVTS" in the system (this comes from the `caps.so` library):
 
 ```julia
 d = filter(x -> unsafe_string(unsafe_load(x).Label) == "AmpVTS", LADSPA.descriptors())[1]
@@ -19,6 +19,8 @@ Create some buffers for it and connect them to the instance.
 
 ```julia
 buffers = [zeros(Float32, 64) for n in 1:unsafe_load(d).PortCount]
+defaults = [1, 0.25, 0.75, 0.5, 0, 0.25, 0.75, 1, 0.25, 0.75, 0.75]; [buffers[k][1] = defaults[k] for k in 1:length(defaults)]
+
 for n in 1:unsafe_load(d).PortCount
     LADSPA.connect_port(d, p, n-1, buffers[n])
 end
@@ -166,6 +168,24 @@ export connect_port
 Run the ladspa plugin instance for the given sample count. Make sure all buffers are connected before calling this.
 """
 run(descriptor, instance, sample_count) = ccall(unsafe_load(descriptor).run, Cvoid, (Ptr{Cvoid}, Culong), instance, sample_count)
+
+
+"""
+    run(descriptor, instance, buffers, chunksize)
+
+Run the LADSPA plugin instance over the given buffers with the given chunksize.
+"""
+function run(descriptor, instance, buffers, chunksize)
+    for n in 1:chunksize:(length(buffers[1]) - (chunksize-1))
+        current_buffers = [@view buffers[k][n:(n+(chunksize-1))] for k in 1:length(buffers)]
+
+        for p in 1:length(current_buffers)
+            connect_port(descriptor, instance, p-1, current_buffers[p])
+        end
+        
+        run(descriptor, instance, chunksize)
+    end
+end
 
 export run
 
