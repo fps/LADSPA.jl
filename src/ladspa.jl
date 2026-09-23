@@ -1,3 +1,43 @@
+"""
+A module for loading and running LADSPA plugins from Julia code.
+
+# Examples
+
+Find the plugin with label "AmpVTS" in the system:
+
+```julia
+d = filter(x -> unsafe_string(unsafe_load(x).Label) == "AmpVTS", LADSPA.descriptors())
+```
+
+And instantiate it:
+
+```julia
+p = LADSPA.instantiate(d, 48000)
+```
+
+Create some buffers for it and connect them to the instance.
+
+```julia
+buffers = [zeros(Float32, 64) for n in 1:unsafe_load(d).PortCount]
+for n in 1:unsafe_load(d).PortCount
+    LADSPA.connect_port(d, p, n-1, buffers[n])
+end
+```
+
+Activate the instance (if required):
+
+```julia
+if unsafe_load(d).activate != C_NULL
+    LADSPA.activate(d, p)
+end
+```
+
+And finally run it for 64 frames:
+
+```julia
+LADSPA.run(d, p, 64)
+```
+"""
 module LADSPA
 
 import Libdl
