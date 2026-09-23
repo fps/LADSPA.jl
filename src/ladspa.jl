@@ -189,4 +189,34 @@ end
 
 export run
 
+
+"""
+    prepare_buffers(descriptor, length)
+
+Prepare an array of buffers for a plugin.
+"""
+prepare_buffers(descriptor, length) = [ zeros(Float32, length) for n in 1:unsafe_load(descriptor).PortCount ]
+
+export prepare_buffers
+
+
+"""
+    deactivate(descriptor, instance)
+
+Deactivate a plugin instance
+"""
+deactivate(descriptor, instance) = ccall(unsafe_load(descriptor).deactivate, Cvoid, (Ptr{Cvoid},), instance)
+
+export deactivate
+
+
+"""
+    cleanup(descriptor, instance)
+
+Cleanup a plugin instance
+"""
+cleanup(descriptor, instance) = ccall(unsafe_load(descriptor).cleanup, Cvoid, (Ptr{Cvoid},), instance)
+
+export cleanup
+
 end
