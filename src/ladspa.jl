@@ -6,7 +6,7 @@ A module for loading and running LADSPA plugins from Julia code.
 Find the plugin with label "AmpVTS" in the system:
 
 ```julia
-d = filter(x -> unsafe_string(unsafe_load(x).Label) == "AmpVTS", LADSPA.descriptors())
+d = filter(x -> unsafe_string(unsafe_load(x).Label) == "AmpVTS", LADSPA.descriptors())[1]
 ```
 
 And instantiate it:
