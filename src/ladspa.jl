@@ -18,7 +18,9 @@ p = LADSPA.instantiate(d, 48000)
 Create some buffers for it and connect them to the instance.
 
 ```julia
-buffers = [zeros(Float32, 64) for n in 1:unsafe_load(d).PortCount]
+buffers = LADSPA.prepare_buffers(d, 64)
+
+# Set some control port default values
 defaults = [1, 0.25, 0.75, 0.5, 0, 0.25, 0.75, 1, 0.25, 0.75, 0.75]; [buffers[k][1] = defaults[k] for k in 1:length(defaults)]
 
 for n in 1:unsafe_load(d).PortCount
@@ -75,7 +77,7 @@ struct Descriptor
     Maker::Cstring
     Copyright::Cstring
     PortCount::Culong
-    PortDescriptors::Ptr{Cvoid}
+    PortDescriptors::Ptr{Cint}
     PortNames::Ptr{Cvoid}
     PortRangeHints::Ptr{Cvoid}
     ImplementationData::Ptr{Cvoid}
@@ -218,5 +220,26 @@ Cleanup a plugin instance
 cleanup(descriptor, instance) = ccall(unsafe_load(descriptor).cleanup, Cvoid, (Ptr{Cvoid},), instance)
 
 export cleanup
+
+
+IS_PORT_INPUT = 1
+IS_PORT_OUTPUT = 2
+IS_PORT_CONTROL = 4
+IS_PORT_AUDIO = 8
+
+export IS_PORT_INPUT
+export IS_PORT_OUTPUT
+export IS_PORT_CONTROL
+export IS_PORT_AUDIO
+
+
+"""
+    port_has_property(descriptor, port_index, property)
+
+Check if a port has a property. See IS_PORT_INPUT, IS_PORT_OUTPUT, IS_PORT_CONTROL, IS_PORT_AUDIO)
+"""
+port_has_property(descriptor, port_index, property) = port_index in 1:unsafe_load(descriptor).PortCount ? unsafe_load(unsafe_load(descriptor).PortDescriptors, port_index) & property != 0 : false
+
+export port_has_property
 
 end
