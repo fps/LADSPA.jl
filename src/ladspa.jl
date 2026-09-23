@@ -157,9 +157,9 @@ export activate
 """
     connect_port(descriptor, instance, port_index, buffer)
 
-Connect a port of an instance of a plugin to a buffer (e.g. Vector{Float32})
+Connect a port of an instance of a plugin to a buffer (e.g. Vector{Cfloat})
 """
-connect_port(descriptor, instance, port_index, buffer) = ccall(unsafe_load(descriptor).connect_port, Cvoid, (Ptr{Cvoid}, Culong, Ptr{Float32}), instance, port_index, buffer)
+connect_port(descriptor, instance, port_index, buffer) = ccall(unsafe_load(descriptor).connect_port, Cvoid, (Ptr{Cvoid}, Culong, Ptr{Cfloat}), instance, port_index, buffer)
 
 export connect_port
 
@@ -197,7 +197,7 @@ export run
 
 Prepare an array of buffers for a plugin.
 """
-prepare_buffers(descriptor, length) = [ zeros(Float32, length) for n in 1:unsafe_load(descriptor).PortCount ]
+prepare_buffers(descriptor, length) = [ zeros(Cfloat, length) for n in 1:unsafe_load(descriptor).PortCount ]
 
 export prepare_buffers
 
