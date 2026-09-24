@@ -149,7 +149,7 @@ export instantiate
 
 Activate a plugin instance. Call this only when unsafe_load(descriptor).activate != C_NULL.
 """
-activate(descriptor, instance) = ccall(unsafe_load(descriptor).activate, Cvoid, (Ptr{Cvoid},), instance)
+activate(descriptor, instance) = if unsafe_load(descriptor).activate != C_NULL; ccall(unsafe_load(descriptor).activate, Cvoid, (Ptr{Cvoid},), instance); end
 
 export activate
 
@@ -207,7 +207,7 @@ export prepare_buffers
 
 Deactivate a plugin instance
 """
-deactivate(descriptor, instance) = ccall(unsafe_load(descriptor).deactivate, Cvoid, (Ptr{Cvoid},), instance)
+deactivate(descriptor, instance) = if unsafe_load(descriptor).deactivate != C_NULL; ccall(unsafe_load(descriptor).deactivate, Cvoid, (Ptr{Cvoid},), instance); end
 
 export deactivate
 
@@ -222,15 +222,15 @@ cleanup(descriptor, instance) = ccall(unsafe_load(descriptor).cleanup, Cvoid, (P
 export cleanup
 
 
-IS_PORT_INPUT = 1
-IS_PORT_OUTPUT = 2
-IS_PORT_CONTROL = 4
-IS_PORT_AUDIO = 8
+PORT_INPUT = 1
+PORT_OUTPUT = 2
+PORT_CONTROL = 4
+PORT_AUDIO = 8
 
-export IS_PORT_INPUT
-export IS_PORT_OUTPUT
-export IS_PORT_CONTROL
-export IS_PORT_AUDIO
+export PORT_INPUT
+export PORT_OUTPUT
+export PORT_CONTROL
+export PORT_AUDIO
 
 
 """
