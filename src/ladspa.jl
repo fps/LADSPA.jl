@@ -221,39 +221,39 @@ function port_default(descriptor, port_index, samplerate)
 
     masked = hint.HintDescriptor & 0x3c0
     
-    if masked == 0
+    if masked == 0 # NO DEFAULT - DUNNO :)
         0f0
-    elseif masked == 0x40
+    elseif masked == 0x40 # DEFAULT_MINIMUM
         hint.LowerBound
-    elseif masked == 0x80
+    elseif masked == 0x80 # DEFAULT_LOW
         if hint_logarithmic
             exp(25f-2 * log(hint.UpperBound) + 75f-2 * log(hint.LowerBound))
         else
             (25f-2 * hint.UpperBound + 75f-2 * hint.LowerBound)
         end
-    elseif masked == 0xc0
+    elseif masked == 0xc0 # DEFAULT_MIDDLE
         if hint_logarithmic
             exp((log(hint.UpperBound) + log(hint.LowerBound)) / 2)
         else
             (hint.UpperBound + hint.LowerBound) / 2
         end
-    elseif masked == 0x100
+    elseif masked == 0x100 # DEFAULT_HIGH
         if hint_logarithmic
             exp(75f-2 * log(hint.UpperBound) + 25f-2 * log(hint.LowerBound))
         else
             (75f-2 * hint.UpperBound + 25f-2 * hint.LowerBound)
         end
-    elseif masked == 0x140
+    elseif masked == 0x140 # DEFAULT_MAXIMUM
         hint.UpperBound
-    elseif masked == 0x200
+    elseif masked == 0x200 # DEFAULT_0
         0f0
-    elseif masked == 0x240
+    elseif masked == 0x240 # DEFAULT_1
         1f0
-    elseif masked == 0x280
+    elseif masked == 0x280 # DEFAULT_100
         100f0
-    elseif masked == 0x2c0
+    elseif masked == 0x2c0 # DEFAULT_$$)
         444f0
-    else
+    else # DUNNO :)
         0f0
     end
 end
