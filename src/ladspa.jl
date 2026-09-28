@@ -286,7 +286,7 @@ export activate
 
 
 """
-    connect_port(descriptor, instance, port_index, buffer)
+    connect_port(instance, port_index, buffer)
 
 Connect a port of an instance of a plugin to a buffer (e.g. Vector{Cfloat}). See also LADSPA.prepare_buffers.
 """
@@ -302,7 +302,7 @@ export connect_port
 
 
 """
-    run(descriptor, instance, sample_count)
+    run(instance, sample_count)
 
 Run the ladspa plugin instance for the given sample count. Make sure all buffers are connected before calling this.
 """
@@ -324,17 +324,19 @@ function run(instance, buffers, chunksize)
         
         run(instance, chunksize)
     end
+
+    # TODO: Run for the remaining samples...
 end
 
 export run
 
 
 """
-    prepare_buffers(descriptor, length)
+    prepare_buffers(descriptor, sample_count)
 
 Prepare an array of buffers for a plugin.
 """
-prepare_buffers(descriptor, length) = [ zeros(Cfloat, length) for n in 1:unsafe_load(descriptor).PortCount ]
+prepare_buffers(descriptor, samplerate, sample_count) = [ port_default(descriptor, n, samplerate) .* ones(Cfloat, sample_count) for n in 1:descriptor.loaded.PortCount ]
 
 export prepare_buffers
 
@@ -385,6 +387,11 @@ export PORT_CONTROL
 export PORT_AUDIO
 
 
+"""
+     port_descriptor(descriptor, port_index)
+
+Get the PortDescriptor for port at index port_index.
+"""
 function port_descriptor(descriptor, port_index)
     if !(port_index in 1:descriptor.loaded.PortCount)
         error("Port index out of bounds")
@@ -393,6 +400,7 @@ function port_descriptor(descriptor, port_index)
     unsafe_load(descriptor.loaded.PortDescriptors, port_index)
 end
 
+export port_descriptor
 
 
 """
