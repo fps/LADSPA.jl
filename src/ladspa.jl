@@ -259,6 +259,15 @@ function port_default(descriptor, port_index, samplerate::Cint)
 end
 
 
+function port_index(descriptor, name::String)
+    for p in 1:descriptor.loaded.PortCount
+        if port_name(descriptor, p) == name
+            return p
+        end
+    end
+end
+
+
 """
     instantiate(descriptor, samplerate)
 
