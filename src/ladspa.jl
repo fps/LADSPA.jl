@@ -201,7 +201,7 @@ function port_range_hint(descriptor, port_index)
 end
 
 
-function port_default(descriptor, port_index, samplerate)
+function port_default(descriptor, port_index, samplerate::Cint)
     if !(port_index in 1:descriptor.loaded.PortCount)
         error("Port index out of bounds")
     end
@@ -264,7 +264,7 @@ end
 
 Instantiate a plugin given a descriptor and a samplerate.
 """
-instantiate(descriptor, samplerate) = Instance(
+instantiate(descriptor, samplerate::Cint) = Instance(
     descriptor,
     ccall(descriptor.loaded.instantiate, Ptr{Cvoid}, (Ptr{Descriptor}, Culong), descriptor.raw, samplerate))
 
@@ -295,7 +295,7 @@ function connect_port(instance, port_index, buffer)
         error("Port index out of bounds")
     end
         
-    ccall(instance.descriptor.loaded.connect_port, Cvoid, (Ptr{Cvoid}, Culong, Ptr{Cfloat}), instance.instance, port_index, buffer)
+    ccall(instance.descriptor.loaded.connect_port, Cvoid, (Ptr{Cvoid}, Culong, Ptr{Cfloat}), instance.instance, port_index-1, buffer)
 end
 
 export connect_port
@@ -319,7 +319,7 @@ function run(instance, buffers, chunksize)
         current_buffers = [@view buffers[k][n:(n+(chunksize-1))] for k in 1:length(buffers)]
 
         for p in 1:length(current_buffers)
-            connect_port(instance, p-1, current_buffers[p])
+            connect_port(instance, p, current_buffers[p])
         end
         
         run(instance, chunksize)
@@ -332,11 +332,11 @@ export run
 
 
 """
-    prepare_buffers(descriptor, sample_count)
+    prepare_buffers(descriptor, samplerate, sample_count)
 
 Prepare an array of buffers for a plugin.
 """
-prepare_buffers(descriptor, samplerate, sample_count) = [ port_default(descriptor, n, samplerate) .* ones(Cfloat, sample_count) for n in 1:descriptor.loaded.PortCount ]
+prepare_buffers(descriptor, samplerate::Cint, sample_count) = [ port_default(descriptor, n, samplerate) .* ones(Cfloat, sample_count) for n in 1:descriptor.loaded.PortCount ]
 
 export prepare_buffers
 
@@ -360,7 +360,7 @@ export deactivate
 
 Cleanup a plugin instance. Does nothing if the plugin does not have a cleanup function.
 """
-function cleanup(descriptor, instance)
+function cleanup(instance)
     if instance.descriptor.loaded.cleanup != C_NULL
         ccall(instance.descriptor.loaded.cleanup, Cvoid, (Ptr{Cvoid},), instance.instance)
     end
