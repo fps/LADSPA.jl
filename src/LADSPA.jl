@@ -131,7 +131,7 @@ struct Instance
 end
 
 
-get_descriptor(instance::Instance) = instance.descripror
+get_descriptor(instance::Instance) = instance.descriptor
 
 get_descriptor(descriptor::LoadedDescriptor) = descriptor
 
