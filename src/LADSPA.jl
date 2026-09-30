@@ -137,11 +137,22 @@ get_descriptor(descriptor::LoadedDescriptor) = descriptor
 
 get_descriptor(descriptor::Ptr{Descriptor}) = LoadedDescriptor(descriptor, unsafe_load(descriptor))
 
+export get_descriptor
+
+function check_port_index(descriptor_or_instance, port_index)
+    descriptor = get_descriptor(descriptor_or_instance)
+
+    if !(port_index in 1:descriptor.loaded.PortCount)
+        error("Port index out of bounds")
+    end
+end    
+
+
 
 """
-    label(descriptor)
+    label(descriptor_or_instance)
 
-Get the label of a plugin from a descriptor.
+Get the label of a plugin from a descriptor or instance.
 """
 label(descriptor_or_instance) = unsafe_string(get_descriptor(descriptor_or_instance).loaded.Label)
 
@@ -149,9 +160,9 @@ export label
 
 
 """
-    name(descriptor)
+    name(descriptor_or_instance)
 
-Get the name of a plugin from a descriptor
+Get the name of a plugin from a descriptor or instance
 """
 name(descriptor_or_instance) = unsafe_string(get_descriptor(descriptor_or_instance).loaded.Name)
 
@@ -191,19 +202,16 @@ export descriptors
 function port_name(descriptor_or_instance, port_index)
     descriptor = get_descriptor(descriptor_or_instance)
     
-    if !(port_index in 1:descriptor.loaded.PortCount)
-        error("Port index out of bounds")
-    end
-
+    check_port_index(descriptor_or_instance, port_index)
+    
     unsafe_string(unsafe_load(descriptor.loaded.PortNames, port_index))
 end
 
 
 function port_range_hint(descriptor_or_instance, port_index)
     descriptor = get_descriptor(descriptor_or_instance)
-    if !(port_index in 1:descriptor.loaded.PortCount)
-        error("Port index out of bounds")
-    end
+
+    check_port_index(descriptor_or_instance, port_index)
 
     unsafe_load(descriptor.loaded.PortRangeHints, port_index)
 end
@@ -212,11 +220,9 @@ end
 function port_default(descriptor_or_instance, port_index, samplerate::Cint)
     descriptor = get_descriptor(descriptor_or_instance)
     
-    if !(port_index in 1:descriptor.loaded.PortCount)
-        error("Port index out of bounds")
-    end
+    check_port_index(descriptor_or_instance, port_index)
 
-    hint = port_range_hint(descriptor, port_index)
+        hint = port_range_hint(descriptor, port_index)
 
     hint_logarithmic = (hint.HintDescriptor & 0x10) != 0
     hint_samplerate = (hint.HintDescriptor & 0x8) != 0
@@ -316,9 +322,7 @@ export activate
 Connect a port of an instance of a plugin to a buffer (e.g. Vector{Cfloat}). See also LADSPA.prepare_buffers.
 """
 function connect_port(instance, port_index, buffer)
-    if !(port_index in 1:instance.descriptor.loaded.PortCount)
-        error("Port index out of bounds")
-    end
+    check_port_index(instance, port_index)
         
     ccall(instance.descriptor.loaded.connect_port, Cvoid, (Ptr{Cvoid}, Culong, Ptr{Cfloat}), instance.instance, port_index-1, buffer)
 end
