@@ -131,13 +131,19 @@ struct Instance
 end
 
 
+get_descriptor(instance::Instance) = instance.descripror
+
+get_descriptor(descriptor::LoadedDescriptor) = descriptor
+
+get_descriptor(descriptor::Ptr{Descriptor}) = LoadedDescriptor(descriptor, unsafe_load(descriptor))
+
 
 """
     label(descriptor)
 
 Get the label of a plugin from a descriptor.
 """
-label(descriptor) = unsafe_string(descriptor.loaded.Label)
+label(descriptor_or_instance) = unsafe_string(get_descriptor(descriptor_or_instance).loaded.Label)
 
 export label
 
@@ -147,7 +153,7 @@ export label
 
 Get the name of a plugin from a descriptor
 """
-name(descriptor) = unsafe_string(descriptor.loaded.Name)
+name(descriptor_or_instance) = unsafe_string(get_descriptor(descriptor_or_instance).loaded.Name)
 
 export name
 
@@ -182,8 +188,9 @@ descriptors() = vcat([descriptors(Libdl.dlopen(l)) for l in libraries(path())]..
 
 export descriptors
 
-
-function port_name(descriptor, port_index)
+function port_name(descriptor_or_instance, port_index)
+    descriptor = get_descriptor(descriptor_or_instance)
+    
     if !(port_index in 1:descriptor.loaded.PortCount)
         error("Port index out of bounds")
     end
@@ -192,7 +199,8 @@ function port_name(descriptor, port_index)
 end
 
 
-function port_range_hint(descriptor, port_index)
+function port_range_hint(descriptor_or_instance, port_index)
+    descriptor = get_descriptor(descriptor_or_instance)
     if !(port_index in 1:descriptor.loaded.PortCount)
         error("Port index out of bounds")
     end
@@ -201,7 +209,9 @@ function port_range_hint(descriptor, port_index)
 end
 
 
-function port_default(descriptor, port_index, samplerate::Cint)
+function port_default(descriptor_or_instance, port_index, samplerate::Cint)
+    descriptor = get_descriptor(descriptor_or_instance)
+    
     if !(port_index in 1:descriptor.loaded.PortCount)
         error("Port index out of bounds")
     end
@@ -259,7 +269,9 @@ function port_default(descriptor, port_index, samplerate::Cint)
 end
 
 
-function port_index(descriptor, name::String)
+function port_index(descriptor_or_instance, name::String)
+    descriptor = get_descriptor(descriptor_or_instance)
+    
     for p in 1:descriptor.loaded.PortCount
         if port_name(descriptor, p) == name
             return p
@@ -273,10 +285,14 @@ end
 
 Instantiate a plugin given a descriptor and a samplerate.
 """
-instantiate(descriptor, samplerate::Cint) = Instance(
-    descriptor,
-    ccall(descriptor.loaded.instantiate, Ptr{Cvoid}, (Ptr{Descriptor}, Culong), descriptor.raw, samplerate))
-
+function instantiate(descriptor_or_instance, samplerate::Cint)
+    descriptor = get_descriptor(descriptor_or_instance)
+    
+    Instance(
+        descriptor,
+        ccall(descriptor.loaded.instantiate, Ptr{Cvoid}, (Ptr{Descriptor}, Culong), descriptor.raw, samplerate))
+end
+    
 export instantiate
 
 
@@ -345,7 +361,11 @@ export run
 
 Prepare an array of buffers for a plugin.
 """
-prepare_buffers(descriptor, samplerate::Cint, sample_count) = [ port_default(descriptor, n, samplerate) .* ones(Cfloat, sample_count) for n in 1:descriptor.loaded.PortCount ]
+function prepare_buffers(descriptor_or_instance, samplerate::Cint, sample_count)
+    descriptor = get_descriptor(descriptor_or_instance)
+    
+    [ port_default(descriptor, n, samplerate) .* ones(Cfloat, sample_count) for n in 1:descriptor.loaded.PortCount ]
+end
 
 export prepare_buffers
 
@@ -401,7 +421,9 @@ export PORT_AUDIO
 
 Get the PortDescriptor for port at index port_index.
 """
-function port_descriptor(descriptor, port_index)
+function port_descriptor(descriptor_or_instance, port_index)
+    descriptor = get_descriptor(descriptor_or_instance)
+    
     if !(port_index in 1:descriptor.loaded.PortCount)
         error("Port index out of bounds")
     end
@@ -417,8 +439,8 @@ export port_descriptor
 
 Check if a port has a property. See IS_PORT_INPUT, IS_PORT_OUTPUT, IS_PORT_CONTROL, IS_PORT_AUDIO)
 """
-function port_has_property(descriptor, port_index, property)
-    port_descriptor(descriptor, port_index) & property != 0
+function port_has_property(descriptor_or_instance, port_index, property)
+    port_descriptor(get_descriptor(descriptor_or_instance), port_index) & property != 0
 end
 
 export port_has_property
